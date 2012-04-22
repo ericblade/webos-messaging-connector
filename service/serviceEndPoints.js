@@ -206,7 +206,7 @@ sync.prototype.run = function(syncFuture) {
 	
 	var f = new Future();
 	f.now(function(future) {
-		/*console.log("setting alarm");
+		console.log("setting alarm");
 		f.nest(PalmCall.call("palm://com.palm.power/timeout/", "set", {
 			key: "com.ericblade.synergy.synctimer",
 			"in": "00:05:00",
@@ -214,7 +214,7 @@ sync.prototype.run = function(syncFuture) {
 			params: "{}"
 		}).then(function(postAlarmFuture) {
 			console.log("alarm set result", JSON.stringify(postAlarmFuture.result));			
-		}));*/
+		}));
 		future.nest(DB.find(query, false, false).then(function(dbFuture) {
 			console.log("dbFuture result=", JSON.stringify(dbFuture.result));
 			var dbResult = dbFuture.result;
@@ -244,35 +244,80 @@ sync.prototype.run = function(syncFuture) {
 
 // called when the sync command is completed
 sync.prototype.complete = function() {
-	console.log("begin sync complete");
-	if(this.controller.args.$activity && this.controller.args.$activity.activityId)
-	{
-		PalmCall.call("palm://com.palm.activitymanager/", "complete", {
-			activityName: "synergySyncOutgoing",
-			restart: true,
-			// the docs say you shouldn't need to specify the trigger and callback conditions again, i think..
-			// someone else said reset the callback to a different function .. to avoid the "Temporarily Not Available" problem
-			// other people say you do. so let's try it.
-			trigger: {
-			  key: "fired",
-			  method: "palm://com.palm.db/watch",		  
-			  params: {
-				  query: {
-					  from: "com.ericblade.synergy.immessage:1",
-					  where:
-					  [
-						  { "prop":"folder", "op":"=", "val":"outbox" },
-						  { "prop":"status", "op":"=", "val":"pending" }, 
-					  ]
-				  },
-				  subscribe: true
-			  },
+	var args = this.controller.args;
+	var activity = args.$activity;
+	var activityFuture = PalmCall.call("palm://com.palm.activitymanager", "getDetails", {
+		activityName: "synergySyncOutgoing"
+	});
+	
+	activityFuture.then(function(restartFuture) {
+		console.log("begin sync complete");
+		if(activityFuture.exception)
+		{
+			if(activityFuture.exception.errorCode == 2) {
+				console.log("sync complete: activity not found, re-creating " + JSON.stringify(activityFuture.exception));
+			} else {
+				console.log("sync complete: error getting activity details, re-creating " + JSON.stringify(activityFuture.exception));
 			}
-		}).then(function(f) {
-			console.log("activity complete result=", JSON.stringify(f.result));
-		});
-	}
-	console.log("end sync complete");
+			PalmCall.call("palm://com.palm.activitymanager/", "create",
+			{
+				activity: {
+					callback: { method: "palm://com.ericblade.synergy.service/sync" },
+					name: "synergySyncOutgoing",
+					description: "Outgoing Message Sync for Synergy",
+					type: { foreground: true, /* persist: true */ },
+					//requirements: { wan: true },
+					trigger: {
+					  key: "fired",
+					  method: "palm://com.palm.db/watch",
+					  params: {
+						  query: {
+							  from: "com.ericblade.synergy.immessage:1",
+							  where:
+							  [
+								  { "prop":"folder", "op":"=", "val":"outbox" },
+								  { "prop":"status", "op":"=", "val":"pending" }, 
+							  ]
+						  },
+						  subscribe: true
+					  }
+					},
+					start: true,
+					replace: true
+				},
+				start: true,
+				subscribe: true,
+				replace: true
+			});
+			restartFuture.result = { returnValue: true };
+		}
+	}).then(function(f) {
+		if(activity) {
+			PalmCall.call("palm://com.palm.activitymanager/", "complete", {
+				activityName: "synergySyncOutgoing",
+				restart: true,
+				// the docs say you shouldn't need to specify the trigger and callback conditions again, i think..
+				// someone else said reset the callback to a different function .. to avoid the "Temporarily Not Available" problem
+				// other people say you do. so let's try it.
+				trigger: {
+				  key: "fired",
+				  method: "palm://com.palm.db/watch",		  
+				  params: {
+					  query: {
+						  from: "com.ericblade.synergy.immessage:1",
+						  where:
+						  [
+							  { "prop":"folder", "op":"=", "val":"outbox" },
+							  { "prop":"status", "op":"=", "val":"pending" }, 
+						  ]
+					  },
+					  subscribe: true
+				  },
+				}
+			});		
+		}
+		console.log("end sync complete");
+	});
 }
 
 //*****************************************************************************
@@ -299,7 +344,7 @@ onEnabled.prototype.run = function(future) {
 							  callback: { method: "palm://com.ericblade.synergy.service/sync" },
 							  name: "synergySyncOutgoing",
 							  description: "Outgoing Message Sync for Synergy",
-							  type: { foreground: true, /*persist: true*/ },
+							  type: { foreground: true, /* persist: true */ },
 							  //requirements: { wan: true },
 							  trigger: {
 								key: "fired",
@@ -326,22 +371,8 @@ onEnabled.prototype.run = function(future) {
 	);
 	(args.enabled ? startSync : stopSync).then(function(activityFuture) {
 			console.log("activityFuture", (args.enabled ? "start" : "stop"), " result=", JSON.stringify(activityFuture.result));
-	}).then(function(toSyncFuture) {
-		// call the sync function to start watches and alarms and stuff
-		if(args.enabled)
-		{
-			PalmCall.call("palm://com.ericblade.synergy.service/", "sync", {}).then(function(syncFuture) {
-				console.log("sync result=", JSON.stringify(syncFuture.result));
-			}).then(function(fu) {
-				fu.result = { returnValue: true };
-				future.result = { returnValue: true };
-			});
-		} else {
-			console.log("no sync, removing");
 			future.result = { returnValue: true };
-		}
 	});
-	future.result = { returnValue: true };
 };
 
 

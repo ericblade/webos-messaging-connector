@@ -1,0 +1,10 @@
+{
+	"id": "com.ericblade.synergy",
+	"version": "1.0.0",
+	"vendor": "Eric Blade",
+	"type": "web",
+	"main": "index.html",
+	"title": "Synergy",
+	"icon": "icon.png",
+	"uiRevision":2
+}

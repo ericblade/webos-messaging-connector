@@ -1,0 +1,6 @@
+{
+    "id": "com.ericblade.synergy.loginstate:1",
+    "owner": "com.ericblade.synergy.service",
+    "sync": true,
+    "extends": [ "com.palm.imloginstate:1" ]
+}

@@ -1,0 +1,39 @@
+{
+    "templateId"            : "com.ericblade.synergy.account",
+    "loc_name"              : "Google Voice",
+    "hidden"                : false,
+    "invisible"             : false,
+    "icon"                  : { "loc_32x32": "images/gvoice32.png", "loc_48x48": "images/gvoice48.png", "splitter": "images/gvoice32.png" },
+    "readPermissions"       : [ "com.ericblade.synergy", "com.palm.app.messaging", "com.palm.app.phone" ],
+    "writePermissions"      : [ "com.ericblade.synergy", "com.palm.app.messaging", "com.palm.app.phone" ],
+    "validator"		    : "palm://com.ericblade.synergy.service/checkCredentials",
+    "capabilityProviders"   : [
+                                { "id":"com.ericblade.synergy.account.im",
+                                  "alwaysOn": false,
+                                  "sync": "palm://com.ericblade.synergy.service/sync",
+                                  "loc_name": "Google Voice",
+                                  "loc_shortName": "GVoice",
+                                  "capability":"MESSAGING",
+                                  "capabilitySubtype": "IM",
+                                  "serviceName":"type_synergy",
+                                  "supportsInvisibleStatus": false,
+                                  "implementation": "palm://com.ericblade.synergy.service/",
+				  "onCreate": "palm://com.ericblade.synergy.service/onCreate",
+                                  "onEnabled": "palm://com.ericblade.synergy.service/onEnabled",
+				  "onDelete": "palm://com.ericblade.synergy.service/onDelete",
+                                  "onCredentialsChanged": "palm://com.ericblade.synergy.service/onCredentialsChanged",
+                                  "onCapabilitiesChanged": "palm://com.ericblade.synergy.service/onCapabilitiesChanged",
+                                  "loginStateChanged": "palm://com.ericblade.synergy.service/loginStateChanged",
+                                  "sendIM": "palm://com.ericblade.synergy.service/sendIM",
+                                  "sendCommand": "palm://com.ericblade.synergy.service/sendCommand",
+                                  "chatWithNonBuddies": true,
+                                  "readOnlyData": false,
+                                  "icon": { "loc_32x32": "images/gvoice32.png", "loc_48x48": "images/gvoice48.png", "splitter": "images/gvoice32.png" },
+                                  "dbkinds": {
+                                    "immessage": "com.ericblade.synergy.immessage:1",
+                                    "imloginstate": "com.ericblade.synergy.loginstate:1",
+                                    "imcommand": "com.ericblade.synergy.imcommand:1"
+                                  }
+                                }
+                               ]
+}

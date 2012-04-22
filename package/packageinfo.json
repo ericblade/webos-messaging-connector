@@ -1,0 +1,11 @@
+{
+    "id": "com.ericblade.synergy",
+    "package_format_version": 2,
+    "loc_name": "Synergy",
+    "version": "1.0.0",
+    "vendor": "Eric Blade",
+    "vendorurl": "http://www.ericbla.de/gvoice-webos/",
+    "app": "com.ericblade.synergy",
+    "services": [ "com.ericblade.synergy.service" ],
+    "accounts": [ "com.ericblade.synergy.account" ]
+}

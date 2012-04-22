@@ -1,0 +1,39 @@
+{
+    "extends": [ "com.palm.immessage:1" ],
+    "id": "com.ericblade.synergy.immessage:1",
+    "owner": "com.ericblade.synergy.service",
+    "sync": true,
+    "indexes": [
+        {
+            "name": "outgoingMsg",
+            "props": [
+                {
+                    "name": "folder"
+                },
+                {
+                    "name": "status"
+                },
+                {
+                    "name": "localTimestamp"
+                }
+            ]
+        },
+        {
+            "name": "serviceAndUsername",
+            "props": [
+                {
+                    "name": "serviceName"
+                },
+                {
+                    "name": "username"
+                }
+            ]
+        },
+        {
+             "name": "gConversationIdAndMessageText",
+             "props": [
+                 { "name": "gConversationId" }, { "name": "messageText" }
+             ]
+        }
+    ]
+}

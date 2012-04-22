@@ -1,6 +1,6 @@
 {
     "templateId"            : "com.ericblade.synergy.account",
-    "loc_name"              : "Google Voice",
+    "loc_name"              : "Synergy Messaging",
     "hidden"                : false,
     "invisible"             : false,
     "icon"                  : { "loc_32x32": "images/gvoice32.png", "loc_48x48": "images/gvoice48.png", "splitter": "images/gvoice32.png" },

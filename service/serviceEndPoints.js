@@ -74,6 +74,7 @@ onCreate.prototype.run = function(future) {
 		"objects":[
 		{
 			_kind: "com.ericblade.synergy.loginstate:1",
+			// TODO: we should pull this from the account template.. how?
 			serviceName: "type_synergy",
 			username: "blade.eric", 
 			state: "online", // it doesn't -seem- to matter what i put here, there may be another parameter involved
@@ -190,63 +191,55 @@ sendCommand.prototype.run = function(future) {
 // all possible accountinfos, and sync them all.
 var sync = function(future) {};
 
-sync.prototype.run = function(future) {
-	console.log("sync");
+sync.prototype.run = function(syncFuture) {
+	console.log("begin sync");
+
+	// Setup a database query -- messages that are both in "outbox" and in the
+	// "pending" status are assumed to be needing to be sent
+	var query = {
+		from: "com.ericblade.synergy.immessage:1",
+		where: [
+			{ "prop": "folder", "op": "=", "val": "outbox" },
+			{ "prop": "status", "op": "=", "val": "pending" }
+		]
+	};
 	
-	/*PalmCall.call("palm://com.palm.activitymanager/", "adopt", {
-		activityName: "synergySyncOutgoing",
-		wait: true,
-		subscribe: true,
-		detailedEvents: false
-	}).
-    then(function(AdoptFuture) {
-		console.log("Adopt Result=", JSON.stringify(AdoptFuture.result));*/
-		PalmCall.call("palm://com.palm.power/timeout/", "set", {
+	var f = new Future();
+	f.now(function(future) {
+		console.log("setting alarm");
+		f.nest(PalmCall.call("palm://com.palm.power/timeout/", "set", {
 			key: "com.ericblade.synergy.synctimer",
 			"in": "00:05:00",
-			uri: "palm://com.ericblade.synergy.service.sync",
+			uri: "palm://com.ericblade.synergy.service/sync",
 			params: "{}"
-		}).then(function(AlarmFuture) {
-			console.log("Alarm Result=", JSON.stringify(AlarmFuture.result));
-			// Setup a database query -- messages that are both in "outbox" and in the
-			// "pending" status are assumed to be needing to be sent
-			var query = {
-				from: "com.ericblade.synergy.immessage:1",
-				where: [
-					{ "prop": "folder", "op": "=", "val": "outbox" },
-					{ "prop": "status", "op": "=", "val": "pending" }
-				]
-			}
-			DB.find(query, false, false).then(function(dbFuture) {
-				var dbResult = dbFuture.result;
-				console.log("dbFuture result=", JSON.stringify(dbFuture.result));
-				if(dbResult.results)
+		}).then(function(postAlarmFuture) {
+			console.log("alarm set result", JSON.stringify(postAlarmFuture.result));			
+		}));
+		future.nest(DB.find(query, false, false).then(function(dbFuture) {
+			console.log("dbFuture result=", JSON.stringify(dbFuture.result));
+			var dbResult = dbFuture.result;
+			if(dbResult.results)
+			{
+				var mergeIDs = [ ];
+				// Call our sendIM service function to actually send each message
+				// Record each message ID into an array, and then update them in
+				// the database as "successful", ie - sent.
+				// You may want to not mark them as sent in the database until they
+				// are actually sent via your sendIM function, though.
+				for(var x = 0; x < dbResult.results.length; x++)
 				{
-					var mergeIDs = [ ];
-					// Call our sendIM service function to actually send each message
-					// Record each message ID into an array, and then update them in
-					// the database as "successful", ie - sent.
-					// You may want to not mark them as sent in the database until they
-					// are actually sent via your sendIM function, though.
-					for(var x = 0; x < dbResult.results.length; x++)
-					{
-						console.log("Merging status of ", dbResult.results[x]["_id"]);
-						PalmCall.call("palm://com.ericblade.synergy.service/", "sendIM", {
-							to: dbResult.results[x].to[0].addr,
-							text: dbResult.results[x].messageText
-						});
-						mergeIDs.push( { "_id": dbResult.results[x]["_id"], "status": "successful" });
-					}
-					DB.merge(mergeIDs);
-					dbFuture.result = { returnValue: true };
+					console.log("Merging status of ", dbResult.results[x]["_id"]);
+					PalmCall.call("palm://com.ericblade.synergy.service/", "sendIM", {
+						to: dbResult.results[x].to[0].addr,
+						text: dbResult.results[x].messageText
+					});
+					mergeIDs.push( { "_id": dbResult.results[x]["_id"], "status": "successful" });
 				}
-			}).then(function(dbMergeFuture) {
-				console.log("dbMergeFuture result=", JSON.stringify(dbMergeFuture.result));
-				future.result = { returnValue: true };
-			});
-		});
-	//});
-	future.result = { returnValue: true };
+				DB.merge(mergeIDs);
+			}
+			syncFuture.result = { returnValue: true };
+		}));
+	});
 }
 
 // called when the sync command is completed

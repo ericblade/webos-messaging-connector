@@ -39,32 +39,48 @@ enyo.kind({
 	],
 	// TODO: These should call these test functions with some useful parameters..
 	callCreate: function(inSender, inEvent) { this.$.createAccount.call({ }); },
-	callEnabled: function(inSender, inEvent) { this.$.disenableAccountCap({ enabled: true }); },
-	callDisabled: function(inSender, inEvent) { this.$.disenableAccountCap({ enabled: false }); },
+	callEnabled: function(inSender, inEvent) { this.$.disenableAccountCap.call({ enabled: true }); },
+	callDisabled: function(inSender, inEvent) { this.$.disenableAccountCap.call({ enabled: false }); },
 	callDelete: function(inSender, inEvent) { this.$.deleteAccount.call({ }); },
 	credSuccess: function(inSender, inResponse, inRequest) {
 		this.log(inSender, inResponse, inRequest);
+		this.$.Results.setContent(JSON.stringify(inResponse));
 	},
 	credFailure: function(inSender, inError, inRequest) {
 		this.log(inSender, inError, inRequest);
+		this.$.Results.setContent(JSON.stringify(inError));
 	},
 	enabledSuccess: function(inSender, inResponse, inRequest) {
 		this.log(inSender, inResponse, inRequest);
+		this.$.Results.setContent(JSON.stringify(inResponse));
 	},
 	enabledFailure: function(inSender, inError, inRequest) {
 		this.log(inSender, inError, inRequest);
+		this.$.Results.setContent(JSON.stringify(inError));
+	},
+	createSuccess: function(inSender, inResponse, inRequest) {
+		this.log(inSender, inResponse, inRequest);
+		this.$.Results.setContent(JSON.stringify(inResponse));
+	},
+	createFailure: function(inSender, inError, inRequest) {
+		this.log(inSender, inError, inRequest);
+		this.$.Results.setContent(JSON.stringify(inError));
 	},
 	deleteSuccess: function(inSender, inResponse, inRequest) {
 		this.log(inSender, inResponse, inRequest);
+		this.$.Results.setContent(JSON.stringify(inResponse));
 	},
 	deleteFailure: function(inSender, inError, inRequest) {
 		this.log(inSender, inError, inRequest);
+		this.$.Results.setContent(JSON.stringify(inError));
 	},
 	syncSuccess: function(inSender, inResponse, inRequest) {
 		this.log(inSender, inResponse, inRequest);
+		this.$.Results.setContent(JSON.stringify(inResponse));
 	},
 	syncFailure: function(inSender, inError, inRequest) {
 		this.log(inSender, inError, inRequest);
+		this.$.Results.setContent(JSON.stringify(inError));
 	},
 	checkCredentials: function(inSender, inEvent) {
 		this.log("checking credentials");

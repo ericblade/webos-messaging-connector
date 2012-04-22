@@ -193,13 +193,14 @@ var sync = function(future) {};
 sync.prototype.run = function(future) {
 	console.log("sync");
 	
-	PalmCall.call("palm://com.palm.activitymanager/", "adopt", {
+	/*PalmCall.call("palm://com.palm.activitymanager/", "adopt", {
 		activityName: "synergySyncOutgoing",
 		wait: true,
 		subscribe: true,
 		detailedEvents: false
-	}).then(function(AdoptFuture) {
-		console.log("Adopt Result=", JSON.stringify(AdoptFuture.result));
+	}).
+    then(function(AdoptFuture) {
+		console.log("Adopt Result=", JSON.stringify(AdoptFuture.result));*/
 		PalmCall.call("palm://com.palm.power/timeout/", "set", {
 			key: "com.ericblade.synergy.synctimer",
 			"in": "00:05:00",
@@ -244,7 +245,7 @@ sync.prototype.run = function(future) {
 				future.result = { returnValue: true };
 			});
 		});
-	});
+	//});
 	future.result = { returnValue: true };
 }
 
@@ -254,12 +255,12 @@ sync.prototype.complete = function() {
 	PalmCall.call("palm://com.palm.activitymanager/", "complete", {
 		activityName: "synergySyncOutgoing",
 		restart: true,
-		// the docs say you shouldn't need to specify the trigger conditions again, i think..
+		// the docs say you shouldn't need to specify the trigger and callback conditions again, i think..
+		// someone else said reset the callback to a different function .. to avoid the "Temporarily Not Available" problem
 		// other people say you do. so let's try it.
 		trigger: {
 		  key: "fired",
-		  method: "palm://com.palm.db/watch",
-		  
+		  method: "palm://com.palm.db/watch",		  
 		  params: {
 			  query: {
 				  from: "com.ericblade.synergy.immessage:1",
@@ -270,10 +271,10 @@ sync.prototype.complete = function() {
 				  ]
 			  },
 			  subscribe: true
-		  }
+		  },
 		}
 	}).then(function(f) {
-		console.log("activity complete result=", f.result);
+		console.log("activity complete result=", JSON.stringify(f.result));
 	});
 }
 

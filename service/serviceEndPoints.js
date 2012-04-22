@@ -206,7 +206,7 @@ sync.prototype.run = function(syncFuture) {
 	
 	var f = new Future();
 	f.now(function(future) {
-		console.log("setting alarm");
+		/*console.log("setting alarm");
 		f.nest(PalmCall.call("palm://com.palm.power/timeout/", "set", {
 			key: "com.ericblade.synergy.synctimer",
 			"in": "00:05:00",
@@ -214,7 +214,7 @@ sync.prototype.run = function(syncFuture) {
 			params: "{}"
 		}).then(function(postAlarmFuture) {
 			console.log("alarm set result", JSON.stringify(postAlarmFuture.result));			
-		}));
+		}));*/
 		future.nest(DB.find(query, false, false).then(function(dbFuture) {
 			console.log("dbFuture result=", JSON.stringify(dbFuture.result));
 			var dbResult = dbFuture.result;
@@ -244,31 +244,35 @@ sync.prototype.run = function(syncFuture) {
 
 // called when the sync command is completed
 sync.prototype.complete = function() {
-	console.log("sync complete");
-	PalmCall.call("palm://com.palm.activitymanager/", "complete", {
-		activityName: "synergySyncOutgoing",
-		restart: true,
-		// the docs say you shouldn't need to specify the trigger and callback conditions again, i think..
-		// someone else said reset the callback to a different function .. to avoid the "Temporarily Not Available" problem
-		// other people say you do. so let's try it.
-		trigger: {
-		  key: "fired",
-		  method: "palm://com.palm.db/watch",		  
-		  params: {
-			  query: {
-				  from: "com.ericblade.synergy.immessage:1",
-				  where:
-				  [
-					  { "prop":"folder", "op":"=", "val":"outbox" },
-					  { "prop":"status", "op":"=", "val":"pending" }, 
-				  ]
+	console.log("begin sync complete");
+	if(this.controller.args.$activity && this.controller.args.$activity.activityId)
+	{
+		PalmCall.call("palm://com.palm.activitymanager/", "complete", {
+			activityName: "synergySyncOutgoing",
+			restart: true,
+			// the docs say you shouldn't need to specify the trigger and callback conditions again, i think..
+			// someone else said reset the callback to a different function .. to avoid the "Temporarily Not Available" problem
+			// other people say you do. so let's try it.
+			trigger: {
+			  key: "fired",
+			  method: "palm://com.palm.db/watch",		  
+			  params: {
+				  query: {
+					  from: "com.ericblade.synergy.immessage:1",
+					  where:
+					  [
+						  { "prop":"folder", "op":"=", "val":"outbox" },
+						  { "prop":"status", "op":"=", "val":"pending" }, 
+					  ]
+				  },
+				  subscribe: true
 			  },
-			  subscribe: true
-		  },
-		}
-	}).then(function(f) {
-		console.log("activity complete result=", JSON.stringify(f.result));
-	});
+			}
+		}).then(function(f) {
+			console.log("activity complete result=", JSON.stringify(f.result));
+		});
+	}
+	console.log("end sync complete");
 }
 
 //*****************************************************************************

@@ -16,6 +16,8 @@ var mapReduce = Foundations.Control.mapReduce;
 var MojoDB = Foundations.Data.DB;
 var TempDB = Foundations.Data.TempDB;
 var Person = ContactsLib.Person;
+var Transport = IMPORTS["mojoservice.transport"]
+
 
 
 /**

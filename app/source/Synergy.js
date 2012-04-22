@@ -2,7 +2,7 @@ enyo.kind({
 	name: "Synergy",
 	kind: enyo.VFlexBox,
 	components: [
-		{kind: "PageHeader", components: [
+		{kind: "Header", components: [
 			{content: "Page Header"}
 		]},
 		{flex: 1, kind: "Pane", components: [

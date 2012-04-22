@@ -3,6 +3,8 @@
     { "library": { "name": "foundations", "version":"1.0" } },
     { "library": { "name": "messaging.library", "version": "1.0" } },
     { "library": { "name": "contacts", "version": "1.0" } },
+    {      "library": { "name": "mojoservice.transport"            , "version": "1.0" }},
+
     { "source": "prologue.js" },
     { "source": "serviceAssistant.js" },
     { "source": "serviceEndPoints.js" }

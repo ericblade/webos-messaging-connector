@@ -41,7 +41,8 @@ checkCredentials.prototype.run = function(future) {
     console.log("checkCredentials", args.username, args.password);
     future.result =
 	{
-		returnValue: true, "credentials":
+		returnValue: true,
+		"credentials":
 		{
 			"common":
 			{
@@ -65,8 +66,7 @@ var onCreate = function(future) {};
 // specified in your account-template.json
 onCreate.prototype.run = function(future) {
 	var args = this.controller.args;
-	console.log("onCreate");
-    console.log("onCreate args=", args.config, "cred=", args.credentials);
+    console.log("onCreate args=", JSON.stringify(args.config));
 
 	// Create an object to insert into the database, so that the messaging app
 	// knows that we exist.
@@ -87,7 +87,7 @@ onCreate.prototype.run = function(future) {
 	// you should be able to do this with files. I was unable to get that to work, though.
 	
 	PalmCall.call("palm://com.palm.db/", "put", loginStateRec).then( function(f) {
-        console.log("loginState put result=", f.result)
+        console.log("loginState put result=", JSON.stringify(f.result));
 		var permissions = [
 			{
 				"type": "db.kind",
@@ -116,8 +116,7 @@ onCreate.prototype.run = function(future) {
 		];
 		PalmCall.call("palm://com.palm.db/", "putPermissions", { "permissions": permissions} ).then(function(fu)
 		{
-			console.log("permissions put result=");
-			console.log(fu.result);
+			console.log("permissions put result=", JSON.stringify(fu.result));
 			
 			future.result = { returnValue: true };
 		});
@@ -128,9 +127,9 @@ var onDelete = function(future) {};
 
 // Called when your account is deleted from the Accounts settings, probably used
 // to delete your account info and any stored data
-// TODO: We need to delete the loginstate for the deleted account, here
 onDelete.prototype.run = function(future) {
     console.log("onDelete");
+	DB.del({ from: "com.ericblade.synergy.loginstate:1" });
 	future.result = { returnValue: true };
 }
 
@@ -193,58 +192,89 @@ var sync = function(future) {};
 
 sync.prototype.run = function(future) {
 	console.log("sync");
-	// Set an alarm to run in 5 minutes to call this function.  When it does,
-	// it will recurse.
-	PalmCall.call("palm://com.palm.power/timeout/", "set",
-				  {
-					"key": "com.ericblade.synergy.synctimer",
-					"in": "00:05:00",
-					"uri": "palm://com.ericblade.synergy.service/sync",
-					"params": "{}"
-				  });
-	// Setup a database query -- messages that are both in "outbox" and in the
-	// "pending" status are assumed to be needing to be sent
-	var query = {
-		from: "com.ericblade.synergy.immessage:1",
-		where:
-		[
-			{ "prop":"folder", "op":"=", "val":"outbox" },
-			{ "prop":"status", "op":"=", "val":"pending" }, 
-		]
-	};
 	
-	DB.find(query, false, false).then(function(f) {
-		var result = f.result;
-		console.log("db find successful = ", result.returnValue);
-		if(result.results)
-		{
-			var mergeIDs = [ ];
-			// Call our sendIM service function to actually send each message
-			// Record each message ID into an array, and then update them in
-			// the database as "successful", ie - sent.
-			// You may want to not mark them as sent in the database until they
-			// are actually sent via your sendIM function, though.
-			for(var x = 0; x < result.results.length; x++)
-			{
-				console.log("Merging status of ", result.results[x]["_id"]);
-				PalmCall.call("palm://com.ericblade.synergy.service/", "sendIM",
-							  { to: inResponse.results[x].to[0].addr, text: inResponse.results[x].messageText });
-				mergeIDs.push( { "_id": result.results[x]["_id"], "status":"successful" } );
+	PalmCall.call("palm://com.palm.activitymanager/", "adopt", {
+		activityName: "synergySyncOutgoing",
+		wait: true,
+		subscribe: true,
+		detailedEvents: false
+	}).then(function(AdoptFuture) {
+		console.log("Adopt Result=", JSON.stringify(AdoptFuture.result));
+		PalmCall.call("palm://com.palm.power/timeout/", "set", {
+			key: "com.ericblade.synergy.synctimer",
+			"in": "00:05:00",
+			uri: "palm://com.ericblade.synergy.service.sync",
+			params: "{}"
+		}).then(function(AlarmFuture) {
+			console.log("Alarm Result=", JSON.stringify(AlarmFuture.result));
+			// Setup a database query -- messages that are both in "outbox" and in the
+			// "pending" status are assumed to be needing to be sent
+			var query = {
+				from: "com.ericblade.synergy.immessage:1",
+				where: [
+					{ "prop": "folder", "op": "=", "val": "outbox" },
+					{ "prop": "status", "op": "=", "val": "pending" }
+				]
 			}
-			DB.merge(mergeIDs);
-		}
-		f.result = { returnValue: true };
-	})
-	/*.then(function(fu) {
-		PalmCall.call("palm://com.palm.activitymanager/", "complete",
-					  {
-						activityName: "synergySyncOutgoing",
-						restart: true
-					  });
-		fu.result = { returnValue: true };
-		future.result = { returnValue: true };
-	});*/
+			DB.find(query, false, false).then(function(dbFuture) {
+				var dbResult = dbFuture.result;
+				console.log("dbFuture result=", JSON.stringify(dbFuture.result));
+				if(dbResult.results)
+				{
+					var mergeIDs = [ ];
+					// Call our sendIM service function to actually send each message
+					// Record each message ID into an array, and then update them in
+					// the database as "successful", ie - sent.
+					// You may want to not mark them as sent in the database until they
+					// are actually sent via your sendIM function, though.
+					for(var x = 0; x < dbResult.results.length; x++)
+					{
+						console.log("Merging status of ", dbResult.results[x]["_id"]);
+						PalmCall.call("palm://com.ericblade.synergy.service/", "sendIM", {
+							to: dbResult.results[x].to[0].addr,
+							text: dbResult.results[x].messageText
+						});
+						mergeIDs.push( { "_id": dbResult.results[x]["_id"], "status": "successful" });
+					}
+					DB.merge(mergeIDs);
+					dbFuture.result = { returnValue: true };
+				}
+			}).then(function(dbMergeFuture) {
+				console.log("dbMergeFuture result=", JSON.stringify(dbMergeFuture.result));
+				future.result = { returnValue: true };
+			});
+		});
+	});
 	future.result = { returnValue: true };
+}
+
+// called when the sync command is completed
+sync.prototype.complete = function() {
+	console.log("sync complete");
+	PalmCall.call("palm://com.palm.activitymanager/", "complete", {
+		activityName: "synergySyncOutgoing",
+		restart: true,
+		// the docs say you shouldn't need to specify the trigger conditions again, i think..
+		// other people say you do. so let's try it.
+		trigger: {
+		  key: "fired",
+		  method: "palm://com.palm.db/watch",
+		  
+		  params: {
+			  query: {
+				  from: "com.ericblade.synergy.immessage:1",
+				  where:
+				  [
+					  { "prop":"folder", "op":"=", "val":"outbox" },
+					  { "prop":"status", "op":"=", "val":"pending" }, 
+				  ]
+			  },
+			  subscribe: true
+		  }
+		}
+	}).then(function(f) {
+		console.log("activity complete result=", f.result);
+	});
 }
 
 //*****************************************************************************
@@ -264,14 +294,14 @@ onEnabled.prototype.run = function(future) {
 
     console.log("onEnabledAssistant args.enabled=", args.enabled);
 	
-	/*PalmCall.call("palm://com.palm.activitymanager/", "stop", { activityName: "synergySyncOutgoing" }).then(function() {	
-		PalmCall.call("palm://com.palm.activitymanager/", "create",
+	if(!args.enabled) var stopSync = PalmCall.call("palm://com.palm.activitymanager/", "stop", { activityName: "synergySyncOutgoing" });
+	else var startSync = PalmCall.call("palm://com.palm.activitymanager/", "create",
 					  {
 						  activity: {
 							  callback: { method: "palm://com.ericblade.synergy.service/sync" },
 							  name: "synergySyncOutgoing",
-							  description: "Outgoing Message Sync for SynerGV",
-							  type: { foreground: true, persist: true },
+							  description: "Outgoing Message Sync for Synergy",
+							  type: { foreground: true, /*persist: true*/ },
 							  //requirements: { wan: true },
 							  trigger: {
 								key: "fired",
@@ -295,19 +325,25 @@ onEnabled.prototype.run = function(future) {
 						  subscribe: true,
 						  replace: true
 					  }
-		).then(function(activityFuture) {
-			console.log("activityFuture result=", JSON.stringify(activityFuture.result));
-			activityFuture.result = { returnValue: true };
-		});
-	});*/
-	// call the sync function to start watches and alarms and stuff
-	PalmCall.call("palm://com.ericblade.synergy.service/", "sync", {}).then(function(f) {
-		console.log("sync result=", JSON.stringify(f.result));
-		f.result = { returnValue: true };
-	}).then(function(fu) {
-		fu.result = { returnValue: true };
-		future.result = { returnValue: true };
+	);
+	(args.enabled ? startSync : stopSync).then(function(activityFuture) {
+			console.log("activityFuture", (args.enabled ? "start" : "stop"), " result=", JSON.stringify(activityFuture.result));
+	}).then(function(toSyncFuture) {
+		// call the sync function to start watches and alarms and stuff
+		if(args.enabled)
+		{
+			PalmCall.call("palm://com.ericblade.synergy.service/", "sync", {}).then(function(syncFuture) {
+				console.log("sync result=", JSON.stringify(syncFuture.result));
+			}).then(function(fu) {
+				fu.result = { returnValue: true };
+				future.result = { returnValue: true };
+			});
+		} else {
+			console.log("no sync, removing");
+			future.result = { returnValue: true };
+		}
 	});
+	future.result = { returnValue: true };
 };
 
 

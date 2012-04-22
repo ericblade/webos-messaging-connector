@@ -8,7 +8,6 @@
 	  "name":"com.ericblade.synergy.service",
           "description": "Synergy Service",
           "globalized": false,
-	  "assistant": "ServiceAssistant",
           "commands": [
 	      { "name":"checkCredentials",
 	        "assistant":"checkCredentials",

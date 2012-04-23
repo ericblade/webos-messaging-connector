@@ -182,6 +182,84 @@ sendCommand.prototype.run = function(future) {
 	future.result = { returnValue: true };
 };
 
+//*****************************************************************************
+// Capability enabled notification - called when capability enabled or disabled
+//*****************************************************************************
+var onEnabled = function(future){};
+
+//
+// Synergy service got 'onEnabled' message. When enabled, a sync should be started and future syncs scheduled.
+// Otherwise, syncing should be disabled and associated data deleted.
+// Account-wide configuration should remain and only be deleted when onDelete is called.
+// onEnabled args should be like { accountId: "++Mhsdkfj", enabled: true }
+// 
+
+onEnabled.prototype.run = function(future) {  
+    var args = this.controller.args;
+
+    console.log("onEnabledAssistant args.enabled=", args.enabled);
+	
+	if(!args.enabled) var stopSync = PalmCall.call("palm://com.palm.activitymanager/", "stop", { activityName: "synergySyncOutgoing" });
+	else var startSync = PalmCall.call("palm://com.palm.activitymanager/", "create",
+					  {
+						  activity: {
+							  callback: { method: "palm://com.ericblade.synergy.service/sync" },
+							  name: "synergySyncOutgoing",
+							  description: "Outgoing Message Sync for Synergy",
+							  type: { foreground: true, /* persist: true */ },
+							  //requirements: { wan: true },
+							  trigger: {
+								key: "fired",
+								method: "palm://com.palm.db/watch",
+								params: {
+									query: {
+										from: "com.ericblade.synergy.immessage:1",
+										where:
+										[
+											{ "prop":"folder", "op":"=", "val":"outbox" },
+											{ "prop":"status", "op":"=", "val":"pending" }, 
+										]
+									},
+									subscribe: true
+								}
+							  },
+							  start: true,
+							  replace: true
+						  },
+						  start: true,
+						  subscribe: true,
+						  replace: true
+					  }
+	);
+	(args.enabled ? startSync : stopSync).then(function(activityFuture) {
+			console.log("activityFuture", (args.enabled ? "start" : "stop"), " result=", JSON.stringify(activityFuture.result));
+			future.result = { returnValue: true };
+	});
+};
+
+
+// Here's some possibly not well known things about the services that I'm learning while attempting to read the
+// service code itself (which is in Javascript, but without knowing it's intentions, it's quite difficult to read
+// for my skill level)
+//
+// The command assistants appear to be instances of Prototype js lib Classes.
+// You should be able to do something like
+//
+// runCommandAssistant = Class.create({ run: ..., complete: ... })
+//
+// This would make it a lot more enyo-like in structure.
+//
+// Available functions that the service appears to call inside a class:
+//
+// setup - called before running a command (we should try to adopt a thing here, perhaps)
+// commandTimeout - not a function, but apparently you can set the timeout for individual commands by setting a commandTimeout
+//                  variable.  This will override the command's configured timeout or the service as a whole's timeout
+// timeoutReceived - called when a command has reached it's timeout
+// complete - called when a command run is completed
+// cleanup - called after complete
+// yield - called when a "yield" Event happens, whatever that means
+// cancelSubscription - presumably called when a subscription is cancelled
+
 // The "sync" assistant is normally called from the CONTACTS "Sync Now" button.
 // This doesn't seem to be the case when a MESSAGING connector is added, but we're going
 // to use this to fire off a database watch.  If you're going to be retrieving data from the
@@ -189,6 +267,8 @@ sendCommand.prototype.run = function(future) {
 // can get a wake up alert here.
 // Keep in mind that Synergy can create multiple accounts of one type, so you probably want to dig up
 // all possible accountinfos, and sync them all.
+
+
 var sync = function(future) {};
 
 sync.prototype.run = function(syncFuture) {
@@ -319,60 +399,3 @@ sync.prototype.complete = function() {
 		console.log("end sync complete");
 	});
 }
-
-//*****************************************************************************
-// Capability enabled notification - called when capability enabled or disabled
-//*****************************************************************************
-var onEnabled = function(future){};
-
-//
-// Synergy service got 'onEnabled' message. When enabled, a sync should be started and future syncs scheduled.
-// Otherwise, syncing should be disabled and associated data deleted.
-// Account-wide configuration should remain and only be deleted when onDelete is called.
-// onEnabled args should be like { accountId: "++Mhsdkfj", enabled: true }
-// 
-
-onEnabled.prototype.run = function(future) {  
-    var args = this.controller.args;
-
-    console.log("onEnabledAssistant args.enabled=", args.enabled);
-	
-	if(!args.enabled) var stopSync = PalmCall.call("palm://com.palm.activitymanager/", "stop", { activityName: "synergySyncOutgoing" });
-	else var startSync = PalmCall.call("palm://com.palm.activitymanager/", "create",
-					  {
-						  activity: {
-							  callback: { method: "palm://com.ericblade.synergy.service/sync" },
-							  name: "synergySyncOutgoing",
-							  description: "Outgoing Message Sync for Synergy",
-							  type: { foreground: true, /* persist: true */ },
-							  //requirements: { wan: true },
-							  trigger: {
-								key: "fired",
-								method: "palm://com.palm.db/watch",
-								params: {
-									query: {
-										from: "com.ericblade.synergy.immessage:1",
-										where:
-										[
-											{ "prop":"folder", "op":"=", "val":"outbox" },
-											{ "prop":"status", "op":"=", "val":"pending" }, 
-										]
-									},
-									subscribe: true
-								}
-							  },
-							  start: true,
-							  replace: true
-						  },
-						  start: true,
-						  subscribe: true,
-						  replace: true
-					  }
-	);
-	(args.enabled ? startSync : stopSync).then(function(activityFuture) {
-			console.log("activityFuture", (args.enabled ? "start" : "stop"), " result=", JSON.stringify(activityFuture.result));
-			future.result = { returnValue: true };
-	});
-};
-
-

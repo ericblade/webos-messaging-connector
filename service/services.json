@@ -49,6 +49,18 @@
                 "assistant":"sendCommand",
                 "public": true
               },
+			  { "name": "startActivity",
+			  "assistant": "startActivity",
+			  "public": true
+			  },
+			  { "name": "adoptActivity",
+			  "assistant": "adoptActivity",
+			  "public": true
+			  },
+			  { "name": "completeActivity",
+			  "assistant": "completeActivity",
+			  "public": true
+			  }
           ]
         }
     ]

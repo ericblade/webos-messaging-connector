@@ -199,14 +199,50 @@ onEnabled.prototype.run = function(future) {
 
     console.log("onEnabledAssistant args.enabled=", args.enabled);
 	
-	if(!args.enabled) var stopSync = PalmCall.call("palm://com.palm.activitymanager/", "stop", { activityName: "synergySyncOutgoing" });
+	if(!args.enabled) var stopSync = PalmCall.call("palm://com.palm.activitymanager/", "stop", { activityName: "SynergyOutgoingSync" });
 	else var startSync = PalmCall.call("palm://com.palm.activitymanager/", "create",
-					  {
-						  activity: {
+	{
+		start: true,
+		activity: {
+			name: "SynergyOutgoingSync",
+			description: "Synergy Pending Messages Watch",
+			type: {
+				foreground: true,
+				power: true,
+				powerDebounce: true,
+				explicit: true,
+				persist: true
+			},
+			requirements: {
+				internet: true
+			},
+			trigger: {
+				method: "palm://com.palm.db/watch",
+				key: "fired",
+				params: {
+					subscribe: true,
+					query: {
+						from: "com.ericblade.synergy.immessage:1",
+						where: [
+							{ prop: "status", op: "=", val: "pending" },
+							{ prop: "folder", op: "=", val: "outbox" }
+						],
+						limit: 1
+					}
+				}
+			},
+			callback: {
+				method: "palm://com.ericblade.synergy.service/sync",
+				params: {}
+			}
+		}
+	});
+					  
+/*						  activity: {
 							  callback: { method: "palm://com.ericblade.synergy.service/sync" },
-							  name: "synergySyncOutgoing",
+							  name: "SynergyOutgoingSync",
 							  description: "Outgoing Message Sync for Synergy",
-							  type: { foreground: true, /* persist: true */ },
+							  type: { foreground: true,  persist: true  },
 							  //requirements: { wan: true },
 							  trigger: {
 								key: "fired",
@@ -230,7 +266,7 @@ onEnabled.prototype.run = function(future) {
 						  subscribe: true,
 						  replace: true
 					  }
-	);
+*/					  
 	(args.enabled ? startSync : stopSync).then(function(activityFuture) {
 			console.log("activityFuture", (args.enabled ? "start" : "stop"), " result=", JSON.stringify(activityFuture.result));
 			future.result = { returnValue: true };
@@ -273,33 +309,40 @@ var startActivity = Class.create({
 	{
 		PalmCall.call("palm://com.palm.activitymanager/", "create",
 		{
-			activity: {
-				callback: { method: "palm://com.ericblade.synergy.service/sync" },
-				name: "synergySyncOut",
-				description: "Outgoing Message Sync for Synergy",
-				type: { foreground: true, /* persist: true */ },
-				//requirements: { wan: true },
-				trigger: {
-				  key: "fired",
-				  method: "palm://com.palm.db/watch",
-				  params: {
-					  query: {
-						  from: "com.ericblade.synergy.immessage:1",
-						  where:
-						  [
-							  { "prop":"folder", "op":"=", "val":"outbox" },
-							  { "prop":"status", "op":"=", "val":"pending" }, 
-						  ]
-					  },
-					  subscribe: true
-				  }
-				},
-				start: true,
-				replace: true
+		start: true,
+		activity: {
+			name: "SynergyOutgoingSync",
+			description: "Synergy Pending Messages Watch",
+			type: {
+				foreground: true,
+				power: true,
+				powerDebounce: true,
+				explicit: true,
+				persist: true
 			},
-			start: true,
-			subscribe: true,
-			replace: true
+			requirements: {
+				internet: true
+			},
+			trigger: {
+				method: "palm://com.palm.db/watch",
+				key: "fired",
+				params: {
+					subscribe: true,
+					query: {
+						from: "com.ericblade.synergy.immessage:1",
+						where: [
+							{ prop: "status", op: "=", val: "pending" },
+							{ prop: "folder", op: "=", val: "outbox" }
+						],
+						limit: 1
+					}
+				}
+			},
+			callback: {
+				method: "palm://com.ericblade.synergy.service/sync",
+				params: {}
+			}
+		}
 		}).then(function(f) {
 			console.log("startActivity result=", JSON.stringify(f.result));
 			activityFuture.result = f.result;
@@ -311,7 +354,7 @@ var adoptActivity = Class.create({
 	run: function(adoptFuture)
 	{
 		PalmCall.call("palm://com.palm.activitymanager/", "adopt", {
-			activityName: "synergySyncOut",
+			activityName: "SynergyOutgoingSync",
 			wait: true,
 			subscribe: true
 		}).then(function(f) {
@@ -325,7 +368,7 @@ var completeActivity = Class.create({
 	run: function(completeFuture)
 	{
 		PalmCall.call("palm://com.palm.activitymanager/", "complete", {
-			activityName: "synergySyncOut",
+			activityName: "SynergyOutgoingSync",
 			restart: true,
 			// the docs say you shouldn't need to specify the trigger and callback conditions again, i think..
 			// someone else said reset the callback to a different function .. to avoid the "Temporarily Not Available" problem
@@ -361,7 +404,7 @@ var sync = Class.create({
 		if(activity) {
 		    var activityId = activity.activityId;		
 			var future = PalmCall.call("palm://com.palm.activitymanager/", "adopt", {
-				activityName: "synergySyncOutgoing",
+				activityName: "SynergyOutgoingSync",
 				wait: true
 			}).then(function(f) {
 				console.log("sync setup complete", JSON.stringify(f.result));
@@ -374,14 +417,58 @@ var sync = Class.create({
 	run: function(syncFuture) {
 		var args = this.controller.args;
 		console.log("sync run start");
-		syncFuture.result = { returnValue: true };
+		var f = new Future();
+		var query = {
+					  from: "com.ericblade.synergy.immessage:1",
+					  where:
+					  [
+						  { "prop":"folder", "op":"=", "val":"outbox" },
+						  { "prop":"status", "op":"=", "val":"pending" }, 
+					  ]
+				  };
+
+		f.now(function(future) {
+			console.log("setting alarm");
+			f.nest(PalmCall.call("palm://com.palm.power/timeout/", "set", {
+				key: "com.ericblade.synergy.synctimer",
+				"in": "00:05:00",
+				uri: "palm://com.ericblade.synergy.service/sync",
+				params: "{}"
+			}).then(function(postAlarmFuture) {
+				console.log("alarm set result", JSON.stringify(postAlarmFuture.result));			
+			}));
+			future.nest(DB.find(query, false, false).then(function(dbFuture) {
+				console.log("dbFuture result=", JSON.stringify(dbFuture.result));
+				var dbResult = dbFuture.result;
+				if(dbResult.results)
+				{
+					var mergeIDs = [ ];
+					// Call our sendIM service function to actually send each message
+					// Record each message ID into an array, and then update them in
+					// the database as "successful", ie - sent.
+					// You may want to not mark them as sent in the database until they
+					// are actually sent via your sendIM function, though.
+					for(var x = 0; x < dbResult.results.length; x++)
+					{
+						console.log("Merging status of ", dbResult.results[x]["_id"]);
+						PalmCall.call("palm://com.ericblade.synergy.service/", "sendIM", {
+							to: dbResult.results[x].to[0].addr,
+							text: dbResult.results[x].messageText
+						});
+						mergeIDs.push( { "_id": dbResult.results[x]["_id"], "status": "successful" });
+					}
+					DB.merge(mergeIDs);
+				}
+				syncFuture.result = { returnValue: true };
+			}));
+		});
 	},
 	complete: function() {
 		var args = this.controller.args;
 		var activity = args.$activity;
 		console.log("sync complete starting");
 		return activity && PalmCall.call("palm://com.palm.activitymanager/", "complete", {
-			//activityName: "synergySyncOutgoing",
+			//activityName: "SynergyOutgoingSync",
 			activityId: activity.activityId,
 			restart: true,
 			// the docs say you shouldn't need to specify the trigger and callback conditions again, i think..
@@ -397,7 +484,8 @@ var sync = Class.create({
 					  [
 						  { "prop":"folder", "op":"=", "val":"outbox" },
 						  { "prop":"status", "op":"=", "val":"pending" }, 
-					  ]
+					  ],
+					  limit: 1
 				  },
 				  subscribe: true
 			  },
@@ -467,7 +555,7 @@ sync.prototype.complete = function() {
 	var args = this.controller.args;
 	var activity = args.$activity;
 	var activityFuture = PalmCall.call("palm://com.palm.activitymanager/", "getDetails", {
-		activityName: "synergySyncOutgoing"
+		activityName: "SynergyOutgoingSync"
 	});
 	
 	activityFuture.then(function(restartFuture) {
@@ -483,7 +571,7 @@ sync.prototype.complete = function() {
 			{
 				activity: {
 					callback: { method: "palm://com.ericblade.synergy.service/sync" },
-					name: "synergySyncOutgoing",
+					name: "SynergyOutgoingSync",
 					description: "Outgoing Message Sync for Synergy",
 					type: { foreground: true, persist: true },
 					//requirements: { wan: true },
@@ -514,7 +602,7 @@ sync.prototype.complete = function() {
 	}).then(function(f) {
 		if(activity) {
 			PalmCall.call("palm://com.palm.activitymanager/", "complete", {
-				activityName: "synergySyncOutgoing",
+				activityName: "SynergyOutgoingSync",
 				restart: true,
 				// the docs say you shouldn't need to specify the trigger and callback conditions again, i think..
 				// someone else said reset the callback to a different function .. to avoid the "Temporarily Not Available" problem

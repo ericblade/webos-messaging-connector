@@ -1,3 +1,12 @@
+// TODO: we need to disable/cancel our Activity at onEnable with enabled: false
+// TODO: probably also need to setup an activity that's name is based on the account name,
+//       so that we have one activity per account, and then it should be cake to
+//       know which account it wants us to work on.  Also, someone could have multiple
+//       accounts for a service, with only one of them enabled for messaging (if you have more than one capability)
+// TODO: I think I'd like to add a seperate file that actually handles the
+//       login/authenticate/retrieve messages/send messages stuff, and mostly just
+//       leave this file alone.
+
 // NOTE: There are a few service calls to the Palm ActivityManager service
 // in this source code, that are currently commented out.  I/We need to figure
 // out how to properly get the ActivityManager to work to make the most efficient

@@ -60,6 +60,10 @@
 			  { "name": "completeActivity",
 			  "assistant": "completeActivity",
 			  "public": true
+			  },
+			  { "name": "cancelActivity",
+			  "assistant": "cancelActivity",
+			  "public": true
 			  }
           ]
         }

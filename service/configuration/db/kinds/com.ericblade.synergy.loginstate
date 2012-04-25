@@ -2,5 +2,13 @@
     "id": "com.ericblade.synergy.loginstate:1",
     "owner": "com.ericblade.synergy.service",
     "sync": true,
+    "indexes": [
+        {
+            "name": "byAccountId",
+            "props": [
+                { "name": "accountId" },
+            ]
+        }
+    ]
     "extends": [ "com.palm.imloginstate:1" ]
 }

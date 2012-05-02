@@ -30,8 +30,6 @@
 // service bus.
 console.log("Loading serviceEndPoints *****************************************************");
 
-var checkCredentials = function(future) {};
-
 // Called to test your credentials given - this is specified in the account-template.json, under "validator"
 // args = { "username": username entered, "password": password entered,
 //          "templateId": our template, "config": { ? } }
@@ -45,87 +43,86 @@ var checkCredentials = function(future) {};
 // Also called when credentials stop working, such as an expired access code, or
 // password change, and the user enters new information.
 
-checkCredentials.prototype.run = function(future) {
-    var args = this.controller.args;
-    console.log("checkCredentials", args.username, args.password);
-    future.result =
-	{
-		returnValue: true,
-		"credentials":
-		{
-			"common":
-			{
-				"password": args.password, "username": args.username
+checkCredentials = Class.create({
+	run: function(future) {
+		var args = this.controller.args;
+		console.log("checkCredentials", args.username, args.password);
+		future.result = {
+			returnValue: true,
+			credentials: {
+				common: {
+					password: args.password,
+					username: args.username
+				}
+			},
+			config: {
+				password: args.password,
+				username: args.username
 			}
-		},
-		"config":
-		{
-			"password": args.password,
-			"username": args.username
 		}
-	};
-}
-
-var onCreate = function(future) {};
+	}
+});
 
 // Called when your account is created from the Accounts settings, use this
 // function to create any account specific information.  In this example,
 // we're going to create a loginstate object, so the messaging app can see that
 // we do, in fact, exist.
 // specified in your account-template.json
-onCreate.prototype.run = function(future) {
-	var args = this.controller.args;
-    console.log("onCreate args=", JSON.stringify(args.config));
 
-	// We're going to setup the permissions on the database objects so that our
-	// app can speak to them.  This is purely optional, and according to the docs here:
-	// https://developer.palm.com/content/api/dev-guide/synergy/creating-synergy-contacts-package.html
-	// you should be able to do this with files. I was unable to get that to work, though.
-	
-	var permissions = [
-		{
-			"type": "db.kind",
-			"object": "com.ericblade.synergy.immessage:1",
-			"caller": "com.ericblade.*",
-			"operations":
+onCreate = Class.create({
+	run: function(future) {
+		var args = this.controller.args;
+		console.log("onCreate args=", JSON.stringify(args));
+
+		// Setup permissions on the database objects so that our app can read/write them.
+		// This is purely optional, and according to the docs here:
+		// https://developer.palm.com/content/api/dev-guide/synergy/creating-synergy-contacts-package.html
+		// You shouldn't even need to do this. I wasn't able to immediately get the file method to work though.
+
+		var permissions = [
 			{
-				"read": "allow",
-				"create": "allow",
-				"delete": "allow",
-				"update": "allow"
-			}
-		},
-		{
-			"type": "db.kind",
-			"object": "com.ericblade.synergy.immessage:1",
-			"caller": "com.palm.*",
-			"operations":
+				type: "db.kind",
+				object: "com.ericblade.synergy.immessage:1",
+				caller: "com.ericblade.*",
+				operations: {
+					read: "allow", 
+					create: "allow",
+					"delete": "allow",
+					update: "allow"
+				}
+			},
 			{
-				"read": "allow",
-				"create": "allow",
-				"delete": "allow",
-				"update": "allow",
+				type: "db.kind",
+				object: "com.ericblade.synergy.immessage:1",
+				caller: "com.palm.*",
+				operations: {
+					read: "allow",
+					create: "allow",
+					"delete": "allow",
+					update: "allow",
+				}
 			}
+		];
+
+		PalmCall.call("palm://com.palm.db/", "putPermissions", { permissions: permissions } ).then(function(fut)
+		{
+			console.log("permissions put result=", JSON.stringify(fut.result));
+			future.result = { returnValue: true, permissionsresult:fut.result };
 		}
-	];
-	PalmCall.call("palm://com.palm.db/", "putPermissions", { "permissions": permissions} ).then(function(fu)
-	{
-		console.log("permissions put result=", JSON.stringify(fu.result));
-		
-		future.result = { returnValue: true };
-	});
-}
-
-var onDelete = function(future) {};
+	}
+});
 
 // Called when your account is deleted from the Accounts settings, probably used
 // to delete your account info and any stored data
-onDelete.prototype.run = function(future) {
-    console.log("onDelete");
-	DB.del({ from: "com.ericblade.synergy.loginstate:1" }).then(function(f) {
-		future.result = f.result;
-	});
-}
+
+onDelete = Class.create({
+	run: function(future) {
+		var args = this.controller.args;
+		console.log("onDelete", JSON.stringify(args));
+		DB.del({ from: "com.ericblade.synergy.loginstate:1" }).then(function(fut) {
+			future.result = f.result
+		});
+});
 
 var onCapabilitiesChanged = function(future) {};
 
@@ -301,6 +298,7 @@ onEnabled.prototype.run = function(future) {
 // all possible accountinfos, and sync them all.
 
 // TODO: Add support to the test app to inject accountId here
+
 var startActivity = Class.create({
 	run: function(activityFuture)
 	{

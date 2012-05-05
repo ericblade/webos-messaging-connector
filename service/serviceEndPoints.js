@@ -108,7 +108,7 @@ onCreate = Class.create({
 		{
 			console.log("permissions put result=", JSON.stringify(fut.result));
 			future.result = { returnValue: true, permissionsresult:fut.result };
-		}
+		});
 	}
 });
 
@@ -122,6 +122,7 @@ onDelete = Class.create({
 		DB.del({ from: "com.ericblade.synergy.loginstate:1" }).then(function(fut) {
 			future.result = f.result
 		});
+	}
 });
 
 var onCapabilitiesChanged = function(future) {};

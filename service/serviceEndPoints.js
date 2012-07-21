@@ -30,6 +30,37 @@
 // service bus.
 console.log("Loading serviceEndPoints *****************************************************");
 
+// Here are a list of possible errors that you can return, using throw new Error("code") or future.setException(Error("code")) or some such
+// maybe future.setException(Foundations.Err.create(error.code));
+// Taken from the webOS 3.0 accounts app:
+/*
+                "UNKNOWN_ERROR":                                accountsRb.$L("Unknown error"),
+                "401_UNAUTHORIZED":                             accountsRb.$L("The account credentials you entered are incorrect. Try again."),
+                "408_TIMEOUT":                                  accountsRb.$L("Request timeout"),
+                "500_SERVER_ERROR":                             accountsRb.$L("Server error"),
+                "503_SERVICE_UNAVAILABLE":              accountsRb.$L("Server unavailable"),
+                "412_PRECONDITION_FAILED":              accountsRb.$L("The request is not suitable for the current configuration"),
+                "400_BAD_REQUEST":                              accountsRb.$L("Bad request"),
+                "HOST_NOT_FOUND":                               accountsRb.$L("Host not found"),
+                "CONNECTION_TIMEOUT":                   accountsRb.$L("Connection timeout"),
+                "CONNECTION_FAILED":                    accountsRb.$L("Connection failed"),
+                "NO_CONNECTIVITY":                              accountsRb.$L("Must be connected to a network to sign in"),
+                "ENOTFOUND":                                    accountsRb.$L("Must be connected to a network to sign in"),
+                "SSL_CERT_EXPIRED":                             accountsRb.$L("SSL certificate expired"),
+                "SSL_CERT_UNTRUSTED":                   accountsRb.$L("SSL certificate untrusted"),
+                "SSL_CERT_INVALID":                             accountsRb.$L("SSL certificate invalid"),
+                "SSL_CERT_HOSTNAME_MISMATCH":   accountsRb.$L("SSL certificate hostname mismatch"),
+                "SINGLE_ACCOUNT_ONLY":                  accountsRb.$L("Only one account of this type can exist"),
+                "TIMESTAMP_REFUSED":                    accountsRb.$L("Device date incorrect"),
+                "DUPLICATE_ACCOUNT":                    accountsRb.$L("Duplicate account"),
+                "UNSUPPORTED_CAPABILITY":               accountsRb.$L("Your account is not configured for this service."),
+                "INVALID_EMAIL_ADDRESS":                accountsRb.$L("Please enter a valid email address."),
+                "INVALID_USER":                                 accountsRb.$L("Invalid user"),
+                "ACCOUNT_RESTRICTED":                   accountsRb.$L("User account restricted"),
+                "ACCOUNT_LOCKED":                               accountsRb.$L("Your account is locked.  Please log in using a web browser"),
+                "CALENDAR_DISABLED":                    accountsRb.$L("Your account does not have calendar enabled. Please log in to your account and
+*/
+
 // Called to test your credentials given - this is specified in the account-template.json, under "validator"
 // args = { "username": username entered, "password": password entered,
 //          "templateId": our template, "config": { ? } }
@@ -42,8 +73,11 @@ console.log("Loading serviceEndPoints ******************************************
 // be passed to onCreate, where you can save them.
 // Also called when credentials stop working, such as an expired access code, or
 // password change, and the user enters new information.
+//
+// I am not sure at this time what exactly is called when credentials stop working, or how
+// it even determines that.  That part will require further research.
 
-checkCredentials = Class.create({
+var checkCredentials = Class.create({
 	run: function(future) {
 		var args = this.controller.args;
 		console.log("checkCredentials", args.username, args.password);
@@ -69,7 +103,12 @@ checkCredentials = Class.create({
 // we do, in fact, exist.
 // specified in your account-template.json
 
-onCreate = Class.create({
+// In SynerGV, I use this to load an additional database with the user's webOS account _id field,
+// and their username, as well as configuration settings that are used on a per-account basis.
+// args contains the accountId field, which is the webOS account _id, as well as the objects
+// passed down from checkCredentials.
+
+var onCreate = Class.create({
 	run: function(future) {
 		var args = this.controller.args;
 		console.log("onCreate args=", JSON.stringify(args));
@@ -77,7 +116,10 @@ onCreate = Class.create({
 		// Setup permissions on the database objects so that our app can read/write them.
 		// This is purely optional, and according to the docs here:
 		// https://developer.palm.com/content/api/dev-guide/synergy/creating-synergy-contacts-package.html
-		// You shouldn't even need to do this. I wasn't able to immediately get the file method to work though.
+		
+		// You should be able to do this by specifying a file: service/configuration/db/kinds/com.ericblade.synergy.immessage
+		// and then placing the contents of this permissions variable as JSON inside that file.
+		// I am doing this from code, merely to present it since we can't comment system JSON.
 
 		var permissions = [
 			{
@@ -115,7 +157,7 @@ onCreate = Class.create({
 // Called when your account is deleted from the Accounts settings, probably used
 // to delete your account info and any stored data
 
-onDelete = Class.create({
+var onDelete = Class.create({
 	run: function(future) {
 		var args = this.controller.args;
 		console.log("onDelete", JSON.stringify(args));
@@ -125,58 +167,94 @@ onDelete = Class.create({
 	}
 });
 
-var onCapabilitiesChanged = function(future) {};
+// This is called when multiple capabilities are turned on or off. I've not yet implemented this,
+// as the only connectors I've implemented have had at most two capabilities, one or both of which
+// were not able to be disabled.
 
-// Called when multiple capabilities are changed, instead of calling onEnabled several times
-// Only apparently useful if your service handles multiple Synergy capabilities
-
-onCapabilitiesChanged.prototype.run = function(future) {
-    console.log("onCapabilitiesChanged");
-}
- 
-var onCredentialsChanged = function(future) {};
+var onCapabilitiesChanged = Class.create({
+	run: function(future) {
+		var args = this.controller.args;
+		console.log("onCapabilitiesChanged", JSON.stringify(args));
+	}
+}};
 
 // Called when user has entered new, validated credentials
 // Intended so that if you've been not syncing due to a credentials failure, then you'll know
 // that it should be good to go again
 
-onCredentialsChanged.prototype.run = function(future) { 
-    console.log("onCredentialsChanged"); 
-    future.result = { returnValue: true }; 
-};
-
-var loginStateChanged = function(future) {};
+var onCredentialsChanged = Class.create({
+	run: function(future) {
+		var args = this.controller.args;
+		console.log("onCredentialsChanged", JSON.stringify(args));
+	}
+});
 
 // Included as part of the template.  You may want to set up a database watch
 // on your imstate objects, so you know when someone hits the "Offline" or
 // "online" toggle in the Messaging app, so that you can login/logout.
-loginStateChanged.prototype.run = function(future) {
-	console.log("loginStateChanged");
-	future.result = { returnValue: true };
-};
 
-var sendIM = function(future) {};
+var loginStateChanged = Class.create({
+	run: function(future) {
+		var args = this.controller.args;
+		console.log("loginStateChanged", JSON.stringify(args));
+	}
+})
 
 // Included as part of the template.  You might want to fill this in with
 // your outgoing message code, to make it easy to call when needed.
-sendIM.prototype.run = function(future) {
-	console.log("sendIM");
-	future.result = { returnValue: true };
-};
+var sendIM = function(future) {
+	run: function(future) {
+		var args = this.controller.args;
+		console.log("sendIM", JSON.stringify(args));
+	}
+}
 
-var sendCommand = function(future) {};
+// When the Messaging program is told to Add a buddy, Block someone, or remove a Buddy, it will
+// add your custom imcommand kind to the database.  If you need those functions, you should
+// setup a watch on that database, and perform steps similar to this:
 
-// Included as part of the template.  You might want to fill this in with
-// any outgoing command code, to make it easy to call when needed.
-sendCommand.prototype.run = function(future) {
-	console.log("sendIM");
-	future.result = { returnValue: true };
-};
-
-//*****************************************************************************
-// Capability enabled notification - called when capability enabled or disabled
-//*****************************************************************************
-var onEnabled = function(future){};
+var sendCommand = function(future) {
+	run: function(future) {
+		var args = this.controller.args;
+		console.log("sendCommand", JSON.stringify(args));
+		
+		var query = {
+			from: "com.ericblade.synergy.imcommand:1",
+			where: [
+				{ "prop":"status", "op":"=", "val":"pending" }
+			]
+		};
+		future.nest(DB.find(query, false, false).then(function(f) {
+			var res = f.result.results;
+			var mergeIds = [];
+			for(var x = 0; x < res.length; x++) {
+				mergeIds.push({ _id: res[x]._id, status: "successful" });
+				switch(res[x].command) {
+					case "blockBuddy":
+						if(res[x].params.block)
+						{
+							// send block command for res[x].fromUsername on res[x].targetUsername
+						} else {
+							// send unblock command for res[x].fromUsername on res[x].targetUsername
+						}
+						break;
+					case "sendBuddyInvite":
+						// send buddy invite with message res[x].params.message for res[x].fromUsername to res[x].targetUsername
+						break;
+					case "deleteBuddy":
+						// remove buddy from buddy list for res[x].fromUsername to res[x].targetUsername
+						break;
+				}
+			}
+			DB.merge(mergeIds);
+			f.result = { returnValue: true };
+			future.result = { returnValue: true };
+		}));
+		
+		return future;
+		
+	}
+}
 
 //
 // Synergy service got 'onEnabled' message. When enabled, a sync should be started and future syncs scheduled.
@@ -184,87 +262,95 @@ var onEnabled = function(future){};
 // Account-wide configuration should remain and only be deleted when onDelete is called.
 // onEnabled args should be like { accountId: "++Mhsdkfj", enabled: true }
 // 
+// TODO: This function is a total mess, and should be re-written for the example.
+// In SynerGV, this function is where we turn on and off the various database watches.
 
-onEnabled.prototype.run = function(future) {  
-    var args = this.controller.args;
+// Also, according to the webOS documentation, when disabling a capability (enabled: false), you
+// should erase any stored data for that specific capability, but not for the account as a whole,
+// as that data should remain in case they re-enable the capability.
 
-    console.log("onEnabledAssistant args.enabled=", args.enabled);
+var onEnabled = Class.create({
+	run: function(future) {
+		var args = this.controller.args;
 	
-	if(!args.enabled)
-	{
-		// cancel our sync activity, and remove the entry from the messaging loginstates,
-		// so we no longer show up in the app
-		var stopSync = PalmCall.call("palm://com.ericblade.synergy.service/", "cancelActivity", { accountId: args.accountId }).then(function(f) {
-			DB.del({ from: "com.ericblade.synergy.loginstate:1" });
-		});
-	}
-	else
-	{
-		// Create an object to insert into the database, so that the messaging app
-		// knows that we exist.
-		var loginStateRec = {
-			"objects":[
-			{
-				_kind: "com.ericblade.synergy.loginstate:1",
-				// TODO: we should pull this from the account template.. how?
-				serviceName: "type_synergy",
-				accountId: args.accountId,
-				username: "blade.eric", 
-				state: "online", // it doesn't -seem- to matter what i put here, there may be another parameter involved
-				availability: 1
-			}]
-		};
-
-		// And then start an Activity to organize our syncing		
+		console.log("onEnabledAssistant args.enabled=", args.enabled);
 		
-		PalmCall.call("palm://com.palm.db/", "put", loginStateRec).then( function(f) {
-			var startSync = PalmCall.call("palm://com.palm.activitymanager/", "create",
-			{
-				start: true,
-				activity: {
-					name: "SynergyOutgoingSync:" + args.accountId,
-					description: "Synergy Pending Messages Watch",
-					type: {
-						foreground: true,
-						power: true,
-						powerDebounce: true,
-						explicit: true,
-						persist: true
-					},
-					requirements: {
-						internet: true
-					},
-					trigger: {
-						method: "palm://com.palm.db/watch",
-						key: "fired",
-						params: {
-							subscribe: true,
-							query: {
-								from: "com.ericblade.synergy.immessage:1",
-								where: [
-									{ prop: "status", op: "=", val: "pending" },
-									{ prop: "folder", op: "=", val: "outbox" },
-									// TODO: Grab the username from somewhere, and insert it here
-									/*{ prop: "serviceName", op: "=", val: "type_synergy" },
-									{ prop: "userName", op: "=", val: TODO GET USERNAME FROM SOMEWHERE },*/
-								],
-								limit: 1
-							}
-						}
-					},
-					callback: {
-						method: "palm://com.ericblade.synergy.service/sync",
-						params: {}
-					}
-				}
+		if(!args.enabled)
+		{
+			// cancel our sync activity, and remove the entry from the messaging loginstates,
+			// so we no longer show up in the app
+			var stopSync = PalmCall.call("palm://com.ericblade.synergy.service/", "cancelActivity", { accountId: args.accountId }).then(function(f) {
+				DB.del({ from: "com.ericblade.synergy.loginstate:1" });
 			});
+		}
+		else
+		{
+			// Create an object to insert into the database, so that the messaging app
+			// knows that we exist.
+			var loginStateRec = {
+				"objects":[
+				{
+					_kind: "com.ericblade.synergy.loginstate:1",
+					// TODO: we should pull this from the account template.. how?
+					serviceName: "type_synergy",
+					accountId: args.accountId,
+					username: "blade.eric", 
+					state: "online", // it doesn't -seem- to matter what i put here, there may be another parameter involved
+					availability: 1
+				}]
+			};
+	
+			// And then start an Activity to organize our syncing		
+			
+			PalmCall.call("palm://com.palm.db/", "put", loginStateRec).then( function(f) {
+				var startSync = PalmCall.call("palm://com.palm.activitymanager/", "create",
+				{
+					start: true,
+					activity: {
+						name: "SynergyOutgoingSync:" + args.accountId,
+						description: "Synergy Pending Messages Watch",
+						type: {
+							foreground: true,
+							power: true,
+							powerDebounce: true,
+							explicit: true,
+							persist: true
+						},
+						requirements: {
+							internet: true
+						},
+						trigger: {
+							method: "palm://com.palm.db/watch",
+							key: "fired",
+							params: {
+								subscribe: true,
+								query: {
+									from: "com.ericblade.synergy.immessage:1",
+									where: [
+										{ prop: "status", op: "=", val: "pending" },
+										{ prop: "folder", op: "=", val: "outbox" },
+										// TODO: Grab the username from somewhere, and insert it here
+										/*{ prop: "serviceName", op: "=", val: "type_synergy" },
+										{ prop: "userName", op: "=", val: TODO GET USERNAME FROM SOMEWHERE },*/
+									],
+									limit: 1
+								}
+							}
+						},
+						callback: {
+							method: "palm://com.ericblade.synergy.service/sync",
+							params: {}
+						}
+					}
+				});
+			});
+		}
+						  
+		(args.enabled ? startSync : stopSync).then(function(activityFuture) {
+				console.log("activityFuture", (args.enabled ? "start" : "stop"), " result=", JSON.stringify(activityFuture.result));
+				future.result = { returnValue: true };
 		});
 	}
-					  
-	(args.enabled ? startSync : stopSync).then(function(activityFuture) {
-			console.log("activityFuture", (args.enabled ? "start" : "stop"), " result=", JSON.stringify(activityFuture.result));
-			future.result = { returnValue: true };
-	});
 };
 
 

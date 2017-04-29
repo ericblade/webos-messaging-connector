@@ -44,83 +44,83 @@ enyo.kind({
 		]},
 	],
 	// TODO: These should call these test functions with some useful parameters..
-	startActivity: function(inSender, inEvent) { this.$.startActivity.call({ }); },
-	adoptActivity: function(inSender, inEvent) { this.$.adoptActivity.call({ }); },
-	completeActivity: function(inSender, inEvent) { this.$.completeActivity.call({ }); },
-	callCreate: function(inSender, inEvent) { this.$.createAccount.call({ }); },
-	callEnabled: function(inSender, inEvent) { this.$.disenableAccountCap.call({ enabled: true }); },
-	callDisabled: function(inSender, inEvent) { this.$.disenableAccountCap.call({ enabled: false }); },
-	callDelete: function(inSender, inEvent) { this.$.deleteAccount.call({ }); },
-	startSuccess: function(inSender, inResponse, inRequest) {
+	startActivity(inSender, inEvent) { this.$.startActivity.call({ }); },
+	adoptActivity(inSender, inEvent) { this.$.adoptActivity.call({ }); },
+	completeActivity(inSender, inEvent) { this.$.completeActivity.call({ }); },
+	callCreate(inSender, inEvent) { this.$.createAccount.call({ }); },
+	callEnabled(inSender, inEvent) { this.$.disenableAccountCap.call({ enabled: true }); },
+	callDisabled(inSender, inEvent) { this.$.disenableAccountCap.call({ enabled: false }); },
+	callDelete(inSender, inEvent) { this.$.deleteAccount.call({ }); },
+	startSuccess(inSender, inResponse, inRequest) {
 		this.log(inSender, inResponse, inRequest);
 		this.$.Results.setContent(JSON.stringify(inResponse));
 	},
-	stopFailure: function(inSender, inError, inRequest) {
+	stopFailure(inSender, inError, inRequest) {
 		this.log(inSender, inError, inRequest);
 		this.$.Results.setContent(JSON.stringify(inError));
 	},
-	adoptSuccess: function(inSender, inResponse, inRequest) {
+	adoptSuccess(inSender, inResponse, inRequest) {
 		this.log(inSender, inResponse, inRequest);
 		this.$.Results.setContent(JSON.stringify(inResponse));
 	},
-	adoptFailure: function(inSender, inError, inRequest) {
-		this.log(inSender, inError, inRequest);
-		this.$.Results.setContent(JSON.stringify(inError));
-	},	
-	completeSuccess: function(inSender, inResponse, inRequest) {
-		this.log(inSender, inResponse, inRequest);
-		this.$.Results.setContent(JSON.stringify(inResponse));
-	},
-	completeFailure: function(inSender, inError, inRequest) {
+	adoptFailure(inSender, inError, inRequest) {
 		this.log(inSender, inError, inRequest);
 		this.$.Results.setContent(JSON.stringify(inError));
 	},	
-	credSuccess: function(inSender, inResponse, inRequest) {
+	completeSuccess(inSender, inResponse, inRequest) {
 		this.log(inSender, inResponse, inRequest);
 		this.$.Results.setContent(JSON.stringify(inResponse));
 	},
-	credFailure: function(inSender, inError, inRequest) {
+	completeFailure(inSender, inError, inRequest) {
 		this.log(inSender, inError, inRequest);
 		this.$.Results.setContent(JSON.stringify(inError));
-	},
-	enabledSuccess: function(inSender, inResponse, inRequest) {
+	},	
+	credSuccess(inSender, inResponse, inRequest) {
 		this.log(inSender, inResponse, inRequest);
 		this.$.Results.setContent(JSON.stringify(inResponse));
 	},
-	enabledFailure: function(inSender, inError, inRequest) {
+	credFailure(inSender, inError, inRequest) {
 		this.log(inSender, inError, inRequest);
 		this.$.Results.setContent(JSON.stringify(inError));
 	},
-	createSuccess: function(inSender, inResponse, inRequest) {
+	enabledSuccess(inSender, inResponse, inRequest) {
 		this.log(inSender, inResponse, inRequest);
 		this.$.Results.setContent(JSON.stringify(inResponse));
 	},
-	createFailure: function(inSender, inError, inRequest) {
+	enabledFailure(inSender, inError, inRequest) {
 		this.log(inSender, inError, inRequest);
 		this.$.Results.setContent(JSON.stringify(inError));
 	},
-	deleteSuccess: function(inSender, inResponse, inRequest) {
+	createSuccess(inSender, inResponse, inRequest) {
 		this.log(inSender, inResponse, inRequest);
 		this.$.Results.setContent(JSON.stringify(inResponse));
 	},
-	deleteFailure: function(inSender, inError, inRequest) {
+	createFailure(inSender, inError, inRequest) {
 		this.log(inSender, inError, inRequest);
 		this.$.Results.setContent(JSON.stringify(inError));
 	},
-	syncSuccess: function(inSender, inResponse, inRequest) {
+	deleteSuccess(inSender, inResponse, inRequest) {
 		this.log(inSender, inResponse, inRequest);
 		this.$.Results.setContent(JSON.stringify(inResponse));
 	},
-	syncFailure: function(inSender, inError, inRequest) {
+	deleteFailure(inSender, inError, inRequest) {
 		this.log(inSender, inError, inRequest);
 		this.$.Results.setContent(JSON.stringify(inError));
 	},
-	checkCredentials: function(inSender, inEvent) {
+	syncSuccess(inSender, inResponse, inRequest) {
+		this.log(inSender, inResponse, inRequest);
+		this.$.Results.setContent(JSON.stringify(inResponse));
+	},
+	syncFailure(inSender, inError, inRequest) {
+		this.log(inSender, inError, inRequest);
+		this.$.Results.setContent(JSON.stringify(inError));
+	},
+	checkCredentials(inSender, inEvent) {
 		this.log("checking credentials");
 		var params = { username: this.$.credUser.getValue(), password: this.$.credPass.getValue() };
 		this.$.credService.call(params);
 	},
-	sync: function(inSender, inEvent) {
+	sync(inSender, inEvent) {
 		this.$.syncService.call({ });
 	}
 });
